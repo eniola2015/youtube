@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Clone - Modular Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        ytred: '#ff0000',
+                        ytblack: '#0f0f0f',
+                        ytdarkgray: '#212121',
+                        ytcard: '#181818',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f0f0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f3f;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-ytblack text-white font-sans antialiased min-h-screen flex flex-col selection:bg-ytred selection:text-white">
+
+    <div id="auth-screen" class="fixed inset-0 z-50 bg-ytblack flex items-center justify-center p-4 transition-opacity duration-500">
+        <div class="bg-ytdarkgray border border-zinc-800 p-8 rounded-2xl w-full max-w-md shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500"></div>
+            
+            <div class="text-center mb-6">
+                <i class="fab fa-youtube text-ytred text-5xl mb-2"></i>
+                <h1 class="text-2xl font-bold tracking-tight">YouTube Secure Portal</h1>
+                <p class="text-zinc-400 text-sm mt-1">Backend Auth & Biometric Gateway</p>
+            </div>
+
+            <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Email Address</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400"><i class="fas fa-envelope"></i></span>
+                        <input type="email" id="auth-email" required placeholder="user@youtube.mock" value="creator@youtube.com" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 pl-10 text-sm text-white focus:outline-none focus:border-ytred transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Secure Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400"><i class="fas fa-lock"></i></span>
+                        <input type="password" id="auth-password" required placeholder="••••••••" value="password123" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 pl-10 text-sm text-white focus:outline-none focus:border-ytred transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Face Recognition Simulation</label>
+                    <div id="face-scan-box" class="border-2 border-dashed border-zinc-700 rounded-xl p-4 text-center bg-zinc-900/50 cursor-pointer hover:border-ytred transition" onclick="simulateFaceScan()">
+                        <div id="face-icon-container" class="text-zinc-400 text-3xl mb-1"><i class="fas fa-user-shield"></i></div>
+                        <p id="face-scan-status" class="text-xs text-zinc-300">Click to run Face Biometric Scan</p>
+                    </div>
+                    <input type="hidden" id="face-verified" value="false">
+                </div>
+
+                <div id="auth-error" class="text-red-500 text-xs hidden text-center font-medium"></div>
+
+                <button type="submit" class="w-full bg-ytred hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-red-900/30 flex items-center justify-center space-x-2">
+                    <span>Initialize Session</span>
+                    <i class="fas fa-arrow-right text-xs"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="quiz-screen" class="fixed inset-0 z-40 bg-ytblack/95 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-ytdarkgray border border-zinc-800 p-8 rounded-2xl w-full max-w-lg shadow-2xl animate-fade-in">
+            <div class="flex items-center justify-between mb-4">
+                <span class="bg-red-500/10 text-ytred text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Security Checkpoint</span>
+                <span class="text-xs text-zinc-400">Step 2 of 2</span>
+            </div>
+            
+            <h2 id="quiz-welcome-msg" class="text-xl font-bold mb-2">Goodluck, Creator!</h2>
+            <p class="text-zinc-400 text-sm mb-6">Answer this quick verification question to unlock full platform access.</p>
+
+            <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800 mb-6">
+                <p id="quiz-question" class="font-medium text-sm text-zinc-200 mb-3">Which video category features intense stunt choreography and explosive sequences?</p>
+                <div id="quiz-options" class="space-y-2">
+                    <label class="flex items-center space-x-3 p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 cursor-pointer transition border border-transparent hover:border-zinc-700">
+                        <input type="radio" name="quiz" value="wrong" class="text-ytred focus:ring-0">
+                        <span class="text-sm text-zinc-300">Calisthenics & Bodyweight</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 cursor-pointer transition border border-transparent hover:border-zinc-700">
+                        <input type="radio" name="quiz" value="correct" class="text-ytred focus:ring-0">
+                        <span class="text-sm text-zinc-300">Action Film & Stunts</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 cursor-pointer transition border border-transparent hover:border-zinc-700">
+                        <input type="radio" name="quiz" value="wrong2" class="text-ytred focus:ring-0">
+                        <span class="text-sm text-zinc-300">Funny Pets Comedy</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="quiz-error" class="text-red-500 text-xs mb-3 hidden">Please select the correct option to proceed.</div>
+
+            <button onclick="submitQuiz()" class="w-full bg-ytred hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition shadow-lg">
+                Complete Verification & Enter YouTube
+            </button>
+        </div>
+    </div>
+
+    <header class="sticky top-0 z-30 bg-ytblack/90 backdrop-blur-md border-b border-zinc-800 px-4 h-14 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <button onclick="toggleSidebar()" class="p-2 hover:bg-zinc-800 rounded-full text-zinc-300 transition">
+                <i class="fas fa-bars text-lg"></i>
+            </button>
+            <div class="flex items-center space-x-1 cursor-pointer" onclick="switchTab('home')">
+                <i class="fab fa-youtube text-ytred text-3xl"></i>
+                <span class="font-bold tracking-tighter text-xl hidden sm:inline">YouTube</span>
+                <span class="text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-mono ml-1">NG</span>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="flex-1 max-w-2xl mx-4 flex items-center">
+            <div class="flex w-full bg-zinc-900 border border-zinc-700 rounded-l-full overflow-hidden focus-within:border-blue-500">
+                <input type="text" id="search-input" placeholder="Search action films, calisthenics, funny..." class="w-full bg-transparent px-4 py-2 text-sm text-white focus:outline-none" onkeypress="if(event.key === 'Enter') handleSearch()">
+            </div>
+            <button onclick="handleSearch()" class="bg-zinc-800 border border-l-0 border-zinc-700 px-6 py-2 rounded-r-full hover:bg-zinc-700 text-zinc-300 transition">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button class="p-2.5 hover:bg-zinc-800 rounded-full text-zinc-300 relative">
+                <i class="fas fa-bell"></i>
+                <span class="absolute top-1 right-1 w-2 h-2 bg-ytred rounded-full"></span>
+            </button>
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center font-bold text-sm cursor-pointer shadow">
+                U
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <aside id="sidebar" class="w-64 bg-ytblack border-r border-zinc-800 flex flex-col p-3 space-y-1 overflow-y-auto shrink-0 transition-all duration-300">
+            <button onclick="switchTab('home')" class="sidebar-btn flex items-center space-x-6 px-4 py-3 rounded-xl hover:bg-zinc-800 text-white font-medium text-sm transition bg-zinc-800/80" data-tab="home">
+                <i class="fas fa-house text-lg w-5 text-center"></i>
+                <span>Home</span>
+            </button>
+            <button onclick="switchTab('shorts')" class="sidebar-btn flex items-center space-x-6 px-4 py-3 rounded-xl hover:bg-zinc-800 text-zinc-300 font-medium text-sm transition" data-tab="shorts">
+                <i class="fas fa-bolt text-lg w-5 text-center"></i>
+                <span>Shorts</span>
+            </button>
+            <button onclick="switchTab('premium')" class="sidebar-btn flex items-center space-x-6 px-4 py-3 rounded-xl hover:bg-zinc-800 text-zinc-300 font-medium text-sm transition" data-tab="premium">
+                <i class="fab fa-youtube text-lg w-5 text-center text-ytred"></i>
+                <span>YouTube Premium</span>
+            </button>
+            <button onclick="switchTab('kids')" class="sidebar-btn flex items-center space-x-6 px-4 py-3 rounded-xl hover:bg-zinc-800 text-zinc-300 font-medium text-sm transition" data-tab="kids">
+                <i class="fas fa-child text-lg w-5 text-center text-emerald-400"></i>
+                <span>YouTube Kids</span>
+            </button>
+            <hr class="border-zinc-800 my-2">
+            <div class="px-3 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Backend Modules</div>
+            <button onclick="switchTab('backend')" class="sidebar-btn flex items-center space-x-6 px-4 py-3 rounded-xl hover:bg-zinc-800 text-zinc-300 font-medium text-sm transition" data-tab="backend">
+                <i class="fas fa-server text-lg w-5 text-center text-blue-400"></i>
+                <span>Backend & DB Stats</span>
+            </button>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-ytblack">
+            
+            <!-- Video Player Modal / Active View -->
+            <div id="video-player-view" class="hidden mb-8 bg-ytdarkgray rounded-2xl overflow-hidden border border-zinc-800 shadow-xl">
+                <div class="relative aspect-video bg-black flex items-center justify-center">
+                    <iframe id="active-video-frame" class="w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <div class="p-5">
+                    <h2 id="active-video-title" class="text-xl font-bold mb-2">Video Title</h2>
+                    <div class="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-zinc-800">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center font-bold">YT</div>
+                            <div>
+                                <h4 id="active-channel-name" class="font-semibold text-sm">Channel Name</h4>
+                                <span class="text-xs text-zinc-400">1.2M subscribers</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-full text-sm font-semibold flex items-center space-x-2 transition">
+                                <i class="fas fa-thumbs-up"></i>
+                                <span id="active-likes">145K</span>
+                            </button>
+                            <button onclick="closeVideoPlayer()" class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-full text-sm font-semibold transition">
+                                Back to Feed
+                            </button>
+                        </div>
+                    </div>
+                    <p id="active-video-desc" class="text-sm text-zinc-300 mt-4 leading-relaxed">Video description goes here with detailed insights about action films, calisthenics training, or funny highlights.</p>
+                </div>
+            </div>
+
+            <!-- Tab 1: Home View -->
+            <div id="tab-home" class="space-y-6">
+                <!-- Filter Chips -->
+                <div class="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+                    <button onclick="filterCategory('All')" class="category-chip bg-white text-black px-4 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition">All</button>
+                    <button onclick="filterCategory('Action')" class="category-chip bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition">🎬 Action Films</button>
+                    <button onclick="filterCategory('Calisthenics')" class="category-chip bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition">💪 Calisthenics & Veiny Arms</button>
+                    <button onclick="filterCategory('Funny')" class="category-chip bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition">😂 Fun & Comedy</button>
+                    <button onclick="filterCategory('Tech')" class="category-chip bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition">💻 Tech & Code</button>
+                </div>
+
+                <!-- Video Grid -->
+                <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- Dynamic Video Cards injected by JS -->
+                </div>
+            </div>
+
+            <!-- Tab 2: Shorts View -->
+            <div id="tab-shorts" class="hidden flex flex-col items-center justify-center min-h-[75vh]">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-bold"><i class="fas fa-bolt text-ytred mr-2"></i>YouTube Shorts</h2>
+                    <p class="text-zinc-400 text-sm">Bite-sized viral entertainment</p>
+                </div>
+                <div class="flex space-x-4 overflow-x-auto pb-4 max-w-full w-full justify-center">
+                    <div class="bg-ytdarkgray border border-zinc-800 rounded-2xl w-72 h-[480px] relative overflow-hidden flex flex-col justify-end p-4 shadow-xl shrink-0">
+                        <iframe class="absolute inset-0 w-full h-full pointer-events-none scale-125" src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&loop=1" frameborder="0"></iframe>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                        <div class="relative z-10">
+                            <span class="bg-ytred text-xs font-bold px-2 py-0.5 rounded text-white mb-2 inline-block">Short #1</span>
+                            <h3 class="font-bold text-sm">Epic Calisthenics Handstand Routine</h3>
+                            <p class="text-xs text-zinc-300 mt-1">@fitness_pro • 2.4M views</p>
+                        </div>
+                    </div>
+                    <div class="bg-ytdarkgray border border-zinc-800 rounded-2xl w-72 h-[480px] relative overflow-hidden flex flex-col justify-end p-4 shadow-xl shrink-0">
+                        <iframe class="absolute inset-0 w-full h-full pointer-events-none scale-125" src="https://www.youtube.com/embed/3JZ_D3ELwOQ?autoplay=1&mute=1&loop=1" frameborder="0"></iframe>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                        <div class="relative z-10">
+                            <span class="bg-ytred text-xs font-bold px-2 py-0.5 rounded text-white mb-2 inline-block">Short #2</span>
+                            <h3 class="font-bold text-sm">Insane Action Film Stunt Behind The Scenes</h3>
+                            <p class="text-xs text-zinc-300 mt-1">@stuntman_hq • 890K views</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: YouTube Premium View -->
+            <div id="tab-premium" class="hidden max-w-4xl mx-auto space-y-6">
+                <div class="bg-gradient-to-r from-red-900/40 to-zinc-900 border border-red-500/30 rounded-3xl p-8 text-center relative overflow-hidden">
+                    <i class="fab fa-youtube text-ytred text-6xl mb-3"></i>
+                    <h2 class="text-3xl font-extrabold tracking-tight mb-2">Get YouTube Premium</h2>
+                    <p class="text-zinc-300 max-w-lg mx-auto text-sm mb-6">Enjoy ad-free action films, background play, offline downloads, and uninterrupted calisthenics training tutorials.</p>
+                    <button class="bg-white text-black font-bold px-8 py-3 rounded-full hover:bg-zinc-200 transition shadow-lg">
+                        Try 1 Month Free ($13.99/mo after)
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-ytdarkgray border border-zinc-800 p-6 rounded-2xl">
+                        <i class="fas fa-ban text-ytred text-2xl mb-3"></i>
+                        <h3 class="font-bold mb-1">Ad-Free Videos</h3>
+                        <p class="text-xs text-zinc-400">Watch without interruptions across all your devices.</p>
+                    </div>
+                    <div class="bg-ytdarkgray border border-zinc-800 p-6 rounded-2xl">
+                        <i class="fas fa-download text-ytred text-2xl mb-3"></i>
+                        <h3 class="font-bold mb-1">Downloads & Offline</h3>
+                        <p class="text-xs text-zinc-400">Save your favorite workout guides and movie clips on the go.</p>
+                    </div>
+                    <div class="bg-ytdarkgray border border-zinc-800 p-6 rounded-2xl">
+                        <i class="fas fa-headphones text-ytred text-2xl mb-3"></i>
+                        <h3 class="font-bold mb-1">Background Play</h3>
+                        <p class="text-xs text-zinc-400">Keep audio playing while using other apps or locked screen.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: YouTube Kids View -->
+            <div id="tab-kids" class="hidden max-w-4xl mx-auto space-y-6">
+                <div class="bg-gradient-to-r from-emerald-900/40 to-zinc-900 border border-emerald-500/30 rounded-3xl p-8 text-center relative overflow-hidden">
+                    <i class="fas fa-child text-emerald-400 text-6xl mb-3"></i>
+                    <h2 class="text-3xl font-extrabold tracking-tight mb-2 text-emerald-300">YouTube Kids Portal</h2>
+                    <p class="text-zinc-300 max-w-lg mx-auto text-sm mb-6">A safer, vibrant environment for children to explore educational cartoons, fun adventures, and joyful songs.</p>
+                    <button class="bg-emerald-500 text-black font-bold px-8 py-3 rounded-full hover:bg-emerald-400 transition shadow-lg">
+                        Explore Kid-Safe Videos
+                    </button>
+                </div>
+                <div id="kids-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+            <!-- Tab 5: Backend & DB Stats View -->
+            <div id="tab-backend" class="hidden max-w-4xl mx-auto space-y-6">
+                <div class="bg-ytdarkgray border border-zinc-800 p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-bold flex items-center space-x-2">
+                            <i class="fas fa-server text-blue-400"></i>
+                            <span>Backend & Module Architecture</span>
+                        </h2>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1 rounded-full font-mono">Status: ONLINE</span>
+                    </div>
+                    <p class="text-sm text-zinc-400 mb-6">Simulated Node.js / Express backend server communicating with MongoDB instance storing video metadata and user credentials.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800 font-mono text-xs text-zinc-300">
+                            <div class="text-blue-400 font-bold mb-2">// API Endpoints Registry</div>
+                            <p>GET /api/v1/videos (200 OK)</p>
+                            <p>POST /api/v1/auth/biometric (Verified)</p>
+                            <p>POST /api/v1/quiz/verify (Passed)</p>
+                            <p>GET /api/v1/recommendations (Active)</p>
+                        </div>
+                        <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800 font-mono text-xs text-zinc-300">
+                            <div class="text-emerald-400 font-bold mb-2">// Database Cluster State</div>
+                            <p>DB_NAME: youtube_production_ng</p>
+                            <p>TOTAL_VIDEOS_INDEXED: 12</p>
+                            <p>ACTIVE_SESSIONS: 1 (Encrypted)</p>
+                            <p>LATENCY: 14ms (Lagos Edge Node)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // Mock Database of Videos with Working Embedded IDs & Categories
+        const videosDatabase = [
+            {
+                id: 1,
+                title: "Ultimate Action Film Stunt Compilation & Chase Sequences",
+                category: "Action",
+                channel: "Blockbuster Clips",
+                views: "3.2M views",
+                time: "2 days ago",
+                duration: "14:20",
+                embedId: "3JZ_D3ELwOQ",
+                thumbnail: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&auto=format&fit=crop&q=80",
+                desc: "High-octane action film sequences featuring jaw-dropping stunt choreography, explosions, and intense pursuit scenes."
+            },
+            {
+                id: 2,
+                title: "Advanced Calisthenics & Veiny Arm Muscle Workout Routine",
+                category: "Calisthenics",
+                channel: "Fitness Shred",
+                views: "890K views",
+                time: "1 week ago",
+                duration: "10:15",
+                embedId: "dQw4w9WgXcQ",
+                thumbnail: "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=600&auto=format&fit=crop&q=80",
+                desc: "Build vascularity and supreme upper body strength with this professional calisthenics and veiny arm conditioning guide."
+            },
+            {
+                id: 3,
+                title: "Funniest Pets & Comedy Moments That Will Make You Laugh",
+                category: "Funny",
+                channel: "Laugh Factory",
+                views: "5.1M views",
+                time: "3 days ago",
+                duration: "8:45",
+                embedId: "kJQP7kiw5Fk",
+                thumbnail: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600&auto=format&fit=crop&q=80",
+                desc: "Unstoppable laughter with hilarious cats, dogs, and funny animal antics captured on camera."
+            },
+            {
+                id: 4,
+                title: "Building Fullstack Web Applications with HTML, CSS & JS",
+                category: "Tech",
+                channel: "Code Mastery",
+                views: "420K views",
+                time: "5 days ago",
+                duration: "25:10",
+                embedId: "9bZkp7q19f0",
+                thumbnail: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80",
+                desc: "Step-by-step modular programming tutorial teaching frontend and backend integration from scratch."
+            },
+            {
+                id: 5,
+                title: "Insane Street Workout & Calisthenics Transformation",
+                category: "Calisthenics",
+                channel: "Bar Brothers",
+                views: "1.8M views",
+                time: "2 weeks ago",
+                duration: "12:30",
+                embedId: "3JZ_D3ELwOQ",
+                thumbnail: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80",
+                desc: "Push your limits with extreme calisthenics moves, muscle-ups, and intense forearm and bicep pumps."
+            },
+            {
+                id: 6,
+                title: "Hollywood Blockbuster Behind The Scenes Action Trailer",
+                category: "Action",
+                channel: "Cinema Insider",
+                views: "950K views",
+                time: "4 days ago",
+                duration: "6:20",
+                embedId: "dQw4w9WgXcQ",
+                thumbnail: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&auto=format&fit=crop&q=80",
+                desc: "Dive deep into the special effects and stunt work of top-tier action movies."
+            }
+        ];
+
+        const kidsVideos = [
+            {
+                id: 101,
+                title: "Colorful Shapes & Nursery Rhymes for Kids",
+                channel: "Kids Fun Land",
+                views: "15M views",
+                embedId: "kJQP7kiw5Fk",
+                thumbnail: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=600&auto=format&fit=crop&q=80"
+            },
+            {
+                id: 102,
+                title: "Magical Animal Adventures & Fun Cartoons",
+                channel: "Junior Academy",
+                views: "8.4M views",
+                embedId: "9bZkp7q19f0",
+                thumbnail: "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=600&auto=format&fit=crop&q=80"
+            }
+        ];
+
+        // Authentication & Simulation State
+        function simulateFaceScan() {
+            const status = document.getElementById("face-scan-status");
+            const box = document.getElementById("face-scan-box");
+            const icon = document.getElementById("face-icon-container");
+            const hiddenInput = document.getElementById("face-verified");
+
+            status.innerText = "Scanning facial biometric signature...";
+            box.classList.add("border-blue-500", "bg-blue-500/10");
+
+            setTimeout(() => {
+                status.innerText = "Face Verified Successfully! (ID: 9948-NG)";
+                status.className = "text-xs text-emerald-400 font-semibold";
+                icon.innerHTML = '<i class="fas fa-user-check text-emerald-400"></i>';
+                box.classList.remove("border-blue-500", "bg-blue-500/10");
+                box.classList.add("border-emerald-500", "bg-emerald-500/10");
+                hiddenInput.value = "true";
+            }, 1200);
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const verified = document.getElementById("face-verified").value;
+            const errorDiv = document.getElementById("auth-error");
+
+            if(verified !== "true") {
+                errorDiv.innerText = "Please complete face recognition scan first!";
+                errorDiv.classList.remove("hidden");
+                return;
+            }
+
+            // Hide Auth, Show Quiz Screen
+            document.getElementById("auth-screen").classList.add("opacity-0", "pointer-events-none");
+            setTimeout(() => {
+                document.getElementById("auth-screen").classList.add("hidden");
+                document.getElementById("quiz-screen").classList.remove("hidden");
+            }, 500);
+        }
+
+        function submitQuiz() {
+            const selected = document.querySelector('input[name="quiz"]:checked');
+            const errorDiv = document.getElementById("quiz-error");
+
+            if(!selected) {
+                errorDiv.classList.remove("hidden");
+                return;
+            }
+
+            // Hide Quiz Screen, welcome complete
+            document.getElementById("quiz-screen").classList.add("hidden");
+            renderVideos(videosDatabase);
+            renderKidsVideos();
+        }
+
+        // Render Home Videos
+        function renderVideos(list) {
+            const grid = document.getElementById("video-grid");
+            grid.innerHTML = "";
+
+            if(list.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-400">No videos found matching your criteria.</div>`;
+                return;
+            }
+
+            list.forEach(video => {
+                const card = document.createElement("div");
+                card.className = "group cursor-pointer flex flex-col space-y-2";
+                card.onclick = () => openVideoPlayer(video);
+                card.innerHTML = `
+                    <div class="relative aspect-video rounded-xl overflow-hidden bg-zinc-800">
+                        <img src="${video.thumbnail}" alt="${video.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                        <span class="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">${video.duration}</span>
+                    </div>
+                    <div class="flex space-x-3">
+                        <div class="w-9 h-9 rounded-full bg-zinc-700 shrink-0 flex items-center justify-center font-bold text-xs">${video.channel.charAt(0)}</div>
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-sm line-clamp-2 group-hover:text-blue-400 transition">${video.title}</h3>
+                            <p class="text-xs text-zinc-400 mt-1">${video.channel}</p>
+                            <p class="text-xs text-zinc-400">${video.views} • ${video.time}</p>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Render Kids Videos
+        function renderKidsVideos() {
+            const grid = document.getElementById("kids-grid");
+            grid.innerHTML = "";
+            kidsVideos.forEach(video => {
+                const card = document.createElement("div");
+                card.className = "bg-zinc-900 border border-zinc-800 rounded-2xl p-4 cursor-pointer hover:border-emerald-500 transition";
+                card.onclick = () => openVideoPlayer(video);
+                card.innerHTML = `
+                    <div class="aspect-video rounded-xl overflow-hidden mb-3 relative">
+                        <img src="${video.thumbnail}" class="w-full h-full object-cover">
+                    </div>
+                    <h3 class="font-bold text-sm text-emerald-300">${video.title}</h3>
+                    <p class="text-xs text-zinc-400 mt-1">${video.channel} • ${video.views}</p>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Open Video Player
+        function openVideoPlayer(video) {
+            document.getElementById("video-player-view").classList.remove("hidden");
+            document.getElementById("active-video-frame").src = `https://www.youtube.com/embed/${video.embedId}?autoplay=1`;
+            document.getElementById("active-video-title").innerText = video.title;
+            document.getElementById("active-channel-name").innerText = video.channel;
+            document.getElementById("active-video-desc").innerText = video.desc || "Explore trending videos, action clips, and professional fitness tutorials on YouTube.";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function closeVideoPlayer() {
+            document.getElementById("video-player-view").classList.add("hidden");
+            document.getElementById("active-video-frame").src = "";
+        }
+
+        // Filter Categories
+        function filterCategory(category) {
+            document.querySelectorAll(".category-chip").forEach(btn => {
+                btn.className = "category-chip bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition";
+            });
+            event.target.className = "category-chip bg-white text-black px-4 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition";
+
+            if(category === 'All') {
+                renderVideos(videosDatabase);
+            } else {
+                const filtered = videosDatabase.filter(v => v.category === category);
+                renderVideos(filtered);
+            }
+        }
+
+        // Search Handler
+        function handleSearch() {
+            const query = document.getElementById("search-input").value.toLowerCase();
+            const filtered = videosDatabase.filter(v => 
+                v.title.toLowerCase().includes(query) || 
+                v.category.toLowerCase().includes(query) ||
+                v.channel.toLowerCase().includes(query)
+            );
+            switchTab('home');
+            renderVideos(filtered);
+        }
+
+        // Tab Switcher
+        function switchTab(tabName) {
+            const tabs = ['home', 'shorts', 'premium', 'kids', 'backend'];
+            tabs.forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                if(el) el.classList.add('hidden');
+            });
+
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            if(activeTab) activeTab.classList.remove('hidden');
+
+            document.querySelectorAll('.sidebar-btn').forEach(btn => {
+                btn.classList.remove('bg-zinc-800/80', 'text-white');
+                btn.classList.add('text-zinc-300');
+                if(btn.getAttribute('data-tab') === tabName) {
+                    btn.classList.add('bg-zinc-800/80', 'text-white');
+                }
+            });
+
+            closeVideoPlayer();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            sidebar.classList.toggle("w-64");
+            sidebar.classList.toggle("w-16");
+            // Toggle text visibility in sidebar if desired
+        }
+    </script>
+</body>
+</html>
